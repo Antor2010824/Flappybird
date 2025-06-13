@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flappy Bird - Antor Edition</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: linear-gradient(to bottom, #87CEEB, #f0f9ff);
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+    }
+    canvas {
+      display: block;
+      margin: 20px auto;
+      background: url('https://i.ibb.co/6NHzCKH/bg.png');
+      background-size: cover;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="480" height="640"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const birdImg = new Image();
+    birdImg.src = "https://i.ibb.co/1Lsz7tP/flappy-bird.png";
+
+    let bird = {
+      x: 80,
+      y: 150,
+      width: 40,
+      height: 30,
+      gravity: 0.6,
+      lift: -10,
+      velocity: 0
+    };
+
+    let pipes = [];
+    let frame = 0;
+    let score = 0;
+    let gameOver = false;
+    let flapMessageTimer = 0;
+
+    function drawBird() {
+      ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+    }
+
+    function drawPipe(pipe) {
+      ctx.fillStyle = "#2ecc71";
+      ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
+      ctx.fillRect(pipe.x, pipe.bottom, pipe.width, canvas.height - pipe.bottom);
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      bird.velocity += bird.gravity;
+      bird.y += bird.velocity;
+
+      if (bird.y + bird.height > canvas.height) {
+        bird.y = canvas.height - bird.height;
+        bird.velocity = 0;
+        gameOver = true;
+      }
+
+      // 🟢 Improved pipe generation
+      if (frame % 100 === 0) {
+        let minGap = 120;
+        let maxGap = 160;
+        let gap = Math.floor(Math.random() * (maxGap - minGap + 1)) + minGap;
+
+        let minTop = 50;
+        let maxTop = canvas.height - gap - 100;
+        let top = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
+
+        pipes.push({
+          x: canvas.width,
+          width: 50,
+          top: top,
+          bottom: top + gap,
+          passed: false
+        });
+      }
+
+      for (let i = 0; i < pipes.length; i++) {
+        pipes[i].x -= 2;
+
+        if (!pipes[i].passed && pipes[i].x + pipes[i].width < bird.x) {
+          score++;
+          pipes[i].passed = true;
+        }
+
+        if (
+          bird.x < pipes[i].x + pipes[i].width &&
+          bird.x + bird.width > pipes[i].x &&
+          (bird.y < pipes[i].top || bird.y + bird.height > pipes[i].bottom)
+        ) {
+          gameOver = true;
+        }
+      }
+
+      frame++;
+      if (flapMessageTimer > 0) flapMessageTimer--;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBird();
+      pipes.forEach(drawPipe);
+
+      ctx.fillStyle = "#2c3e50";
+      ctx.font = "28px 'Segoe UI'";
+      ctx.fillText("Score: " + score, 15, 40);
+
+      if (flapMessageTimer > 0) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.font = "22px 'Segoe UI'";
+        ctx.fillText("Flap! 🐦", bird.x + 50, bird.y);
+      }
+
+      if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#ecf0f1";
+        ctx.textAlign = "center";
+        ctx.font = "64px 'Segoe UI'";
+        ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 30);
+
+        ctx.font = "28px 'Segoe UI'";
+        ctx.fillText("Your Score: " + score, canvas.width / 2, canvas.height / 2 + 20);
+
+        ctx.font = "24px 'Segoe UI'";
+        ctx.fillText("Press R to Restart", canvas.width / 2, canvas.height / 2 + 70);
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.code === 'Space' && !gameOver) {
+        bird.velocity = bird.lift;
+        flapMessageTimer = 20;
+      }
+      if (e.code === 'KeyR' && gameOver) {
+        bird.y = 150;
+        bird.velocity = 0;
+        pipes = [];
+        frame = 0;
+        score = 0;
+        gameOver = false;
+      }
+    });
+
+    birdImg.onload = () => {
+      loop();
+    };
+  </script>
+</body>
+</html>
